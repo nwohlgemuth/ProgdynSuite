@@ -1,0 +1,42 @@
+ProgdynSuite Version 1.3: January  9, 2015
+
+Created by Nathan Wohlgemuth
+For questions regarding the use of this program, please send an email to n.wohlgemuth@byu.edu
+
+Original scripts created by:
+	Professor Daniel A. Singleton
+	Davidson Professor of Science
+	Department of Chemistry
+	Texas A&M University
+	P.O. Box 30012
+	College Station, TX 77842-3012
+	(979)845-9166
+	Fax: 979-845-0653
+
+ProgdynSuite is a script set designed to facilitate the use of Gaussian 09, a program that provides electronic structure modeling.
+This script set is designed only to run on BYU's Fulton Supercomputing System.
+To install ProgdynSuite:
+	put a copy of ProgdynSuite.zip in your $HOME directory
+	if not already in your $HOME directory, type: cd $HOME
+	type: unzip ProgdynSuite.zip
+	type: ./InstallProgdyn.sh
+
+Now ProgdynSuite is installed. In your $HOME directory you will have a single directory called 'ProgdynSuite'
+This directory contains three sub-directories: 'ProgdynScripts', 'RunOutputs', and 'SubmitScripts'
+'ProgdynScripts' contains all of the scripts/programs that ProgdynSuite needs to run
+	- freqinHP and progdyn.conf need to be edited specifically for each run
+		- freqinHP is set by running 'RunJob.sh' in the 'SubmitScripts' folder
+		- progdyn.conf contains configuration options for running ProgdynSuite. They must be set specifically for the freqinHP file contents
+'RunOutputs' contains the output of all of the runs of ProgdynSuite
+	- Everytime a job is run, a temp directory is created that stores all the files needed for that run
+	- When the job runs, the job itself creates an output file named out$SLURM_JOB_ID where $SLURM_JOB_ID is set by the supercomputer at run time
+	- There is a script called 'RemoveEmptyTempFiles.sh' that deletes only the empty temp files
+'SubmitScripts' contains the script that you run to start a ProgdynSuite job
+	- To submit a job, change your current directory to the location of the .com file you wish to submit
+	- Run the command RunJob.sh and the script will ask you, for each .com file in your current directory, if you would like to submit it
+	- It will create a temp folder for each .com file that you submit
+	- After running gaussian 09 on the .com file, it will check for normal termination
+	- In the event of normal termination, it will then run Progdyn on the resulting .log file
+	- This second submission will have a separate output file and temp file
+
+For the original documentation included by Professor Singleton, see 'progdynInfo'
