@@ -1,0 +1,127 @@
+Progdyn Script Suite Description:
+
+Here is a description of the files.
+
+The master control program for dynamics, in the form of a Unix Shell Script, is called progdynstarterHP.  For a user to start to use progdynstarterHP, some early lines in it that assign the scratch space and the location of the program files and input files would have to be modified for the local environment.  These lines are between lines 32 and 43 and should be apparent.  The location of the scratch space is usually passed to progdynstarterHP as a parameter.
+
+progdynstarterHP takes as necessary input files:
+freqinHP          - This is the standard output from a Gaussian 98, 03, or 09 frequency calculation using freq=hpmodes.   For isotopically labeled compounds, use freq=(hpmodes,readisotopes). 
+progdyn.conf - This is a file giving a variety of configuration options, called on by many of the subprograms.  progdyn.conf contains explanations of the program options. 
+
+progdynstarterHP takes optional input the files listed below.  These are not needed for basic runs.
+   isomernumber     - A number in file isomernumber provides a start for numbering runs.  The default is 1.
+   detour - A signal file that, by existing, signals the program to do a side calculations
+   nogo - A signal file that, by existing, signals the program to stop between points
+   bypassproggen - A signal file that, by existing, signals the program to use a supplied input file geoPlusVel instead of generating one for itself. 
+   methodfile - A file that contains lines to be added to the end of each g09.com input file, such as lines that call for an NMR calculation
+   ZMAT - An input file for the CFOUR (http://www.cfour.de) suite of programs.  When ZMAT is supplied, progdynstarterHP will automatically run call CFOUR (which must be set up independently by the user) by making use of the script progcfour. 
+   cannontraj - A file containing a vector for each atom, used to fire an initial geometry in a particular direction.
+
+
+progdynstarterHP calls the following programs:
+proggenHP     - An awk program that starts a trajectory, giving each mode its zero point energy (if a quasiclassical calculation) plus random additional excitations depending on the temperature.
+prog1stpoint - Awk program that creates the first Gaussian input file for each run
+prog2ndpoint - Awk program that creates the second Gaussian input file for each run.  prog2ndpoint also checks the energy of the first point to see if it fits with the desired energy, and aborts the run if it does not by creating appropriate output in file Echeck
+progdynb - Creates subsequent Gaussian input files until run is completed, used the awk
+proganal - A program to analyze the latest point and see if a run is done.  This program must be redone for each new system.  Elaborate changes are often programmed into proganal, such as the automatic changing of configuration variables.  proganal creates the output to dynfollowfile and NMRlist or NMRlistdis
+randgen - A program that generates random numbers between 0 and 1.  These are generated all at once and stored in a file for use by proggenHP.
+progcfour - A control script to run CFOUR calculations (not needed for most kinds of runs). 
+
+
+progdynstarterHP has the following output files:
+isomernumber - A running tab of the trajectory number
+runpointnumber - a running tab of the point in the trajectory
+Echeck - output form where prog2ndpoint checks the energy of the trajectory to see if it fits with the desired energy
+geoRecord - A record of all of the geoPlusVel files.
+geoPlusVel - Created by proggen, this gives the starting positions, velocities, isotopic masses, excitations of the normal modes, and initial displacements of the normal modes for current run.
+g09.com - Created by prog1stpoint, prog2ndpoint, and progdynb, this is the latest input file for Gaussian09 for current run and latest point.
+olddynrun and olderdynrun - files containing the last two outputs from Gaussian, for creation of the next point
+traj, traj1, traj2, traj3, etc. - files containing the geometries and energies for each trajectory, numbered by the isomernumber, in a format suitable for reading by Molden. 
+dyn  - A record of the Gaussian outputs.
+dynfollowfile - A short record of the runs and their results.  The data desired for dynfollowfile must be programed into the script proganal as needed for each system studied.
+NMRlist or NMRlistdis - output of NMR predictions at each point in a trajectory
+skipstart - A signal file that, by existing, tells progdynstarterHP that we are in the middle of a run.  For trajectories that are propagated forward and backward in time, skipstart keeps track of whether one is in the forward or reverse part.
+diagnostics - optional output that follows which subprograms are running and configuration variables, decided by variable in progdyn.conf
+vellist - optional output that lists the velocities of each atom, decided by variable in progdyn.conf, or lists the total kinetic energy in the system and the classical temperature. 
+A number of files starting with 'temp' are created then later erased.
+
+
+Here is a listing for the c program randgen, which will need to be compiled and pointed to in "randdir" in progdynstarterHP
+
+#include <stdio.h>
+#include <stdlib.h>
+
+int a,b,c;
+double d;
+
+int product(int x, int y);
+
+int main(void)
+{
+ int count=1;
+ srand48(time (0));
+ while (count<=100000)
+ {
+    d = drand48();
+    printf ("%.20f\n", d);
+    count++;
+ }
+ return 0;
+}
+
+
+
+
+Here is a typical job submission file that I use for PBS on one of our systems.
+#!/bin/bash
+#
+#PBS -l walltime=96:00:00,nodes=1:ppn=8
+#PBS -l mem=15GB
+#PBS -q background
+
+# clean up at the end of the job
+trap "echo contents of data dir;ls -al;echo job statistics;qstat -f $PBS_JOBID;echo END DATE:; date" 0 1 2 3 9 15
+head /proc/cpuinfo
+head /proc/meminfo
+
+export g09root=/apps/lms/g09_B01_XEON
+. $g09root/g09/bsd/g09.profile
+
+mkdir  /tmp/$PBS_JOBID
+#mkdir /data/d-singleton/$PBS_JOBID
+#ln -s /tmp/$PBS_JOBID /data/d-singleton/$PBS_JOBID
+cd  /tmp/$PBS_JOBID
+echo -P- 8 > Default.Route
+echo -M- 14gb >> Default.Route
+cd /data/d-singleton/$PBS_JOBID
+echo -P- 8 > Default.Route
+echo -M- 14gb >> Default.Route
+
+pwd
+
+echo START DATE:
+date
+
+cd /data/d-singleton/n700
+date >> docslog
+/data/d-singleton/binall700/progdynstarterHP /tmp/$PBS_JOBID
+echo contentsOftmp
+ls -l /tmp/$PBS_JOBID
+echo contentsOfdata
+ls -l /data/d-singleton/$PBS_JOBID
+env
+
+exit
+
+
+
+
+Professor Daniel A. Singleton
+Davidson Professor of Science
+Department of Chemistry
+Texas A&M University
+P.O. Box 30012
+College Station, TX  77842-3012
+(979) 845-9166
+Fax: 979-845-0653
+
